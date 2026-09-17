@@ -3,6 +3,8 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import { PrismaClient } from '@prisma/client'
+import createAuthRouter from './auth.js'
+import { requireAuth } from './middleware/authMiddleware.js'
 
 dotenv.config()
 
@@ -12,6 +14,7 @@ const PORT = process.env.PORT || 5000
 
 app.use(cors())
 app.use(express.json({ limit: '2mb' }))
+app.use('/api/auth', createAuthRouter(prisma))
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -22,12 +25,13 @@ app.get('/api/health', (req, res) => {
 })
 
 // GET all notes
-app.get('/api/notes', async (req, res) => {
+app.get('/api/notes', requireAuth, async (req, res) => {
   try {
     const { search, subject, pinned } = req.query
 
     const notes = await prisma.note.findMany({
       where: {
+        userId: req.user.userId,
         ...(subject && subject !== 'All'
           ? { subject }
           : {}),
@@ -79,7 +83,7 @@ app.get('/api/notes', async (req, res) => {
 })
 
 // GET one note
-app.get('/api/notes/:id', async (req, res) => {
+app.get('/api/notes/:id', requireAuth, async (req, res) => {
   try {
     const id = Number(req.params.id)
 
@@ -90,8 +94,8 @@ app.get('/api/notes/:id', async (req, res) => {
       })
     }
 
-    const note = await prisma.note.findUnique({
-      where: { id },
+    const note = await prisma.note.findFirst({
+      where: { id, userId: req.user.userId },
     })
 
     if (!note) {
@@ -115,7 +119,7 @@ app.get('/api/notes/:id', async (req, res) => {
 })
 
 // CREATE a note
-app.post('/api/notes', async (req, res) => {
+app.post('/api/notes', requireAuth, async (req, res) => {
   try {
     const {
       title,
@@ -134,6 +138,7 @@ app.post('/api/notes', async (req, res) => {
 
     const note = await prisma.note.create({
       data: {
+        userId: req.user.userId,
         title: title.trim(),
         subject,
         content,
@@ -157,7 +162,7 @@ app.post('/api/notes', async (req, res) => {
 })
 
 // UPDATE a note
-app.put('/api/notes/:id', async (req, res) => {
+app.put('/api/notes/:id', requireAuth, async (req, res) => {
   try {
     const id = Number(req.params.id)
 
@@ -176,8 +181,8 @@ app.put('/api/notes/:id', async (req, res) => {
       pinned,
     } = req.body
 
-    const existingNote = await prisma.note.findUnique({
-      where: { id },
+    const existingNote = await prisma.note.findFirst({
+      where: { id, userId: req.user.userId },
     })
 
     if (!existingNote) {
@@ -223,7 +228,7 @@ app.put('/api/notes/:id', async (req, res) => {
 })
 
 // DELETE a note
-app.delete('/api/notes/:id', async (req, res) => {
+app.delete('/api/notes/:id', requireAuth, async (req, res) => {
   try {
     const id = Number(req.params.id)
 
@@ -234,8 +239,8 @@ app.delete('/api/notes/:id', async (req, res) => {
       })
     }
 
-    const existingNote = await prisma.note.findUnique({
-      where: { id },
+    const existingNote = await prisma.note.findFirst({
+      where: { id, userId: req.user.userId },
     })
 
     if (!existingNote) {
