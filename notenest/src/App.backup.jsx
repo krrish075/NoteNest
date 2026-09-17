@@ -11,18 +11,6 @@ function ProtectedRoute({ children }) {
 }
 
 export default function App() {
-  const { isLoading } = useAuth()
-
-  if (isLoading) {
-    return (
-      <div className="auth-page">
-        <div className="auth-card" style={{ textAlign: 'center' }}>
-          <p>Loading NoteNest...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <Routes>
       <Route path="/login" element={<Login />} />

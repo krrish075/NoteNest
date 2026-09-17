@@ -1,11 +1,17 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { authApi } from '../authApi'
 import { useAuth } from '../context/AuthContext'
 
 export default function Register() {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { login, isAuthenticated } = useAuth()
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/notes')
+    }
+  }, [isAuthenticated, navigate])
 
   const [form, setForm] = useState({
     name: '',
@@ -29,11 +35,17 @@ export default function Register() {
     setLoading(true)
 
     try {
-      const data = await authApi.register(form)
-      login(data.token)
+      const res = await authApi.register({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        password: form.password,
+      })
+      const accessToken = res.data?.accessToken || res.data?.token
+      const user = res.data?.user
+      login(accessToken, user)
       navigate('/notes')
     } catch (err) {
-      setError(err.message)
+      setError(err.message || 'Failed to register account')
     } finally {
       setLoading(false)
     }

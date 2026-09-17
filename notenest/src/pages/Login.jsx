@@ -1,11 +1,17 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { authApi } from '../authApi'
 import { useAuth } from '../context/AuthContext'
 
 export default function Login() {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { login, isAuthenticated } = useAuth()
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/notes')
+    }
+  }, [isAuthenticated, navigate])
 
   const [form, setForm] = useState({
     email: '',
@@ -28,11 +34,16 @@ export default function Login() {
     setLoading(true)
 
     try {
-      const data = await authApi.login(form)
-      login(data.token)
+      const res = await authApi.login({
+        email: form.email.trim(),
+        password: form.password,
+      })
+      const accessToken = res.data?.accessToken || res.data?.token
+      const user = res.data?.user
+      login(accessToken, user)
       navigate('/notes')
     } catch (err) {
-      setError(err.message)
+      setError(err.message || 'Failed to log in')
     } finally {
       setLoading(false)
     }
